@@ -15,7 +15,7 @@ class RelatedUriField(RelatedField):
 
     """
     def __init__(self, to, attribute, related_name=None, default=NOT_PROVIDED,
-                 null=False, blank=False, readonly=False, readonly=False, full=False,
+                 null=False, blank=False, readonly=False, full=False,
                  unique=False, help_text=None):
         super(RelatedUriField, self).__init__(
             to, attribute, related_name=related_name, default=default,
