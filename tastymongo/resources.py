@@ -122,7 +122,7 @@ class ModelResource(Resource):
             cache_key = self.generate_cache_key('detail', **kwargs)
             self._meta.cache.delete(cache_key)
 
-        self._meta.object_class.objects(pk=kwargs.get('pk')).delete()
+        self._meta.object_class.objects(**kwargs).delete()
 
     def check_filtering(self, field_name, filter_type='exact', filter_bits=None):
         """
