@@ -60,7 +60,7 @@ class ModelResource(Resource):
             raise BadRequest("Invalid resource lookup data provided (mismatched type).")
 
     def get_object_list(self, request):
-        return self._meta.object_class.objects.all()
+        return self._meta.object_class.objects
 
     def obj_get(self, request=None, **kwargs):
         """
