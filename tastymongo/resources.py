@@ -23,23 +23,41 @@ class ModelResource(Resource):
     Blatantly copied and modified from Tastypie's ModelResource.
 
     """
-    def get_resource_uri(self, bundle_or_obj_or_pk):
+    def get_resource_uri(self, bundle_or_obj_or_pk=None, url_name='api_dispatch_list'):
 
-        kwargs = {
-            'resource_name': self._meta.resource_name,
-        }
+        if bundle_or_obj_or_pk is not None:
 
-        if isinstance(bundle_or_obj_or_pk, Bundle):
-            kwargs['pk'] = str(bundle_or_obj_or_pk.obj.pk) 
-        elif isinstance(bundle_or_obj_or_pk, Document):
-            kwargs['pk'] = str(bundle_or_obj_or_pk.pk)
+            kwargs = {
+                'resource_name': self._meta.resource_name,
+            }
+
+            if isinstance(bundle_or_obj_or_pk, Bundle):
+                kwargs['pk'] = str(bundle_or_obj_or_pk.obj.pk) 
+            elif isinstance(bundle_or_obj_or_pk, Document):
+                kwargs['pk'] = str(bundle_or_obj_or_pk.pk)
+            else:
+                kwargs['pk'] = bundle_or_obj_or_pk
+
+            if self._meta.api_name is not None:
+                kwargs['api_name'] = self._meta.api_name
+
+        return super(ModelResource, self).get_resource_uri(bundle_or_obj=bundle_or_obj_or_pk, url_name=url_name)
+
+    def detail_uri_kwargs(self, bundle_or_obj):
+        """
+        Given a ``Bundle`` or an object (typically a ``Model`` instance),
+        it returns the extra kwargs needed to generate a detail URI.
+
+        By default, it uses the model's ``pk`` in order to create the URI.
+        """
+        kwargs = {}
+
+        if isinstance(bundle_or_obj, Bundle):
+            kwargs[self._meta.detail_uri_name] = getattr(bundle_or_obj.obj, self._meta.detail_uri_name)
         else:
-            kwargs['pk'] = bundle_or_obj_or_pk
+            kwargs[self._meta.detail_uri_name] = getattr(bundle_or_obj, self._meta.detail_uri_name)
 
-        if self._meta.api_name is not None:
-            kwargs['api_name'] = self._meta.api_name
-
-        return self._build_reverse_url("api_dispatch_detail", kwargs=kwargs)
+        return kwargs
 
     def obj_get_list(self, request=None, **kwargs):
 
@@ -90,13 +108,17 @@ class ModelResource(Resource):
             setattr(bundle.obj, key, value)
 
         bundle = self.full_hydrate(bundle)
+        self.is_valid(bundle,request)
+
+        if bundle.errors:
+            self.error_response(bundle.errors, request)
 
         # Save the main object.
         bundle.obj.save()
 
         return bundle
 
-    def obj_update(self, bundle, request=None, **kwargs):
+    def obj_update(self, bundle, request=None, skip_errors=False, **kwargs):
 
         if not bundle.obj or not bundle.obj.pk:
             # Attempt to hydrate data from kwargs before doing a lookup for the object.
@@ -121,6 +143,10 @@ class ModelResource(Resource):
                 raise NotFound("A model instance matching the provided arguments could not be found.")
 
         bundle = self.full_hydrate(bundle)
+        self.is_valid(bundle,request)
+
+        if bundle.errors and not skip_errors:
+            self.error_response(bundle.errors, request)
 
         # Save the main object.
         bundle.obj.save()
